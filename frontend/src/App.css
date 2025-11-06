@@ -31,19 +31,38 @@ body {
     position: relative;
 }
 
+    /* Wider card for transaction lists and details */
+    .card.wide {
+        max-width: 600px;
+    }
+
 /* Back Arrow */
 .back-arrow {
     position: absolute;
     top: 20px;
     left: 20px;
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     cursor: pointer;
     color: #6B7280;
+    background: none;
+    border: none;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: color 0.2s;
 }
 
     .back-arrow:hover {
         color: #374151;
+    }
+
+    .back-arrow:focus {
+        outline: 2px solid #8B5CF6;
+        outline-offset: 2px;
+        border-radius: 4px;
     }
 
 /* Error Messages */
@@ -146,8 +165,13 @@ body {
     color: white;
 }
 
-    .btn-primary:hover {
+    .btn-primary:hover:not(:disabled) {
         background: #374151;
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 
 .btn-secondary {
@@ -159,6 +183,20 @@ body {
     .btn-secondary:hover {
         background: #F9FAFB;
         color: #374151;
+    }
+
+.btn-reject {
+    background: #DC2626;
+    color: white;
+}
+
+    .btn-reject:hover:not(:disabled) {
+        background: #B91C1C;
+    }
+
+    .btn-reject:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 
 .btn-link {
@@ -234,6 +272,87 @@ body {
             text-decoration: underline;
         }
 
+/* Transactions List */
+.transactions-list {
+    max-height: 500px;
+    overflow-y: auto;
+    margin: 20px 0;
+}
+
+.transaction-item {
+    background: #F9FAFB;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid #E5E7EB;
+}
+
+    .transaction-item:last-child {
+        margin-bottom: 0;
+    }
+
+.transaction-item-content {
+    margin-bottom: 12px;
+}
+
+.transaction-item-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+    .transaction-item-row:last-child {
+        margin-bottom: 0;
+    }
+
+.transaction-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.transaction-status-pending {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.transaction-status-processing {
+    background: #DBEAFE;
+    color: #1E40AF;
+}
+
+.transaction-status-completed {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.transaction-status-failed,
+.transaction-status-cancelled {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+/* Transaction Actions */
+.transaction-actions {
+    margin-top: 20px;
+}
+
+/* Loading and Empty States */
+.loading-text,
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6B7280;
+    font-size: 16px;
+}
+
+    .empty-state p {
+        margin: 0;
+    }
+
 /* Responsive */
 @media (max-width: 480px) {
     .App {
@@ -244,7 +363,15 @@ body {
         padding: 30px 20px;
     }
 
+        .card.wide {
+            max-width: 100%;
+        }
+
     .card-title {
         font-size: 20px;
+    }
+
+    .transactions-list {
+        max-height: 400px;
     }
 }
