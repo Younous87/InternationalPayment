@@ -3,6 +3,10 @@
   "WorkspaceRootPath": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\.eslintrc.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:.eslintrc.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\App.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:frontend\\src\\App.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
     },
@@ -39,6 +43,19 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": ".eslintrc.json",
+              "DocumentMoniker": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\.eslintrc.json",
+              "RelativeDocumentMoniker": ".eslintrc.json",
+              "ToolTip": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\.eslintrc.json",
+              "RelativeToolTip": ".eslintrc.json",
+              "ViewState": "AgIAABQAAAAAAAAAAAAEwB8AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-11-06T14:39:27.738Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
               "Title": "App.css",
               "DocumentMoniker": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\App.css",
               "RelativeDocumentMoniker": "frontend\\src\\App.css",
@@ -51,7 +68,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "EmployeeTransactionDetailView.js",
               "DocumentMoniker": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\views\\employee\\EmployeeTransactionDetailView.js",
               "RelativeDocumentMoniker": "frontend\\src\\views\\employee\\EmployeeTransactionDetailView.js",
@@ -64,7 +81,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "EmployeeTransactionsListView.js",
               "DocumentMoniker": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\views\\employee\\EmployeeTransactionsListView.js",
               "RelativeDocumentMoniker": "frontend\\src\\views\\employee\\EmployeeTransactionsListView.js",
@@ -77,7 +94,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "App.js",
               "DocumentMoniker": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\App.js",
               "RelativeDocumentMoniker": "frontend\\src\\App.js",
@@ -90,7 +107,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "EmployeeLoginView.js",
               "DocumentMoniker": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\views\\employee\\EmployeeLoginView.js",
               "RelativeDocumentMoniker": "frontend\\src\\views\\employee\\EmployeeLoginView.js",
