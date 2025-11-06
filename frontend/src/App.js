@@ -19,6 +19,11 @@ import MoneySentView from './views/transactions/MoneySentView';
 import MoneyReceivedView from './views/transactions/MoneyReceivedView';
 import VerifyTransactionsView from './views/transactions/VerifyTransactionsView';
 
+// Employee Views
+import EmployeeLoginView from './views/employee/EmployeeLoginView';
+import EmployeeTransactionsListView from './views/employee/EmployeeTransactionsListView';
+import EmployeeTransactionDetailView from './views/employee/EmployeeTransactionDetailView';
+
 function App() {
     return (
         <BrowserRouter>
@@ -57,6 +62,11 @@ function App() {
                     <Route path='/money-sent' element={<MoneySentView />} />
                     <Route path='/money-received' element={<MoneyReceivedView />} />
                     <Route path='/verify-transactions' element={<VerifyTransactionsView />} />
+
+                    {/* Employee Routes */}
+                    <Route path='/employee/login' element={<EmployeeLoginView />} />
+                    <Route path='/employee/transactions' element={<EmployeeTransactionsListView />} />
+                    <Route path='/employee/transactions/:transactionId' element={<EmployeeTransactionDetailView />} />
                 </Routes>
             </div>
         </BrowserRouter>
