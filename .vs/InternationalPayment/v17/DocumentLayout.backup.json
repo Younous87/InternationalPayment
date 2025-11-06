@@ -3,12 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\components\\recoverPassword.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:frontend\\src\\components\\recoverPassword.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\App.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:frontend\\src\\App.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\App.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:frontend\\src\\App.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\views\\employee\\EmployeeLoginView.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:frontend\\src\\views\\employee\\EmployeeLoginView.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
     }
   ],
   "DocumentGroupContainers": [
@@ -27,27 +27,28 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "recoverPassword.js",
-              "DocumentMoniker": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\components\\recoverPassword.js",
-              "RelativeDocumentMoniker": "frontend\\src\\components\\recoverPassword.js",
-              "ToolTip": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\components\\recoverPassword.js",
-              "RelativeToolTip": "frontend\\src\\components\\recoverPassword.js",
-              "ViewState": "AgIAAN8AAAAAAAAAAAAYwPUAAAABAAAAAAAAAA==",
+              "Title": "App.js",
+              "DocumentMoniker": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\App.js",
+              "RelativeDocumentMoniker": "frontend\\src\\App.js",
+              "ToolTip": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\App.js",
+              "RelativeToolTip": "frontend\\src\\App.js",
+              "ViewState": "AgIAADQAAAAAAAAAAAAYwEoAAAATAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
-              "WhenOpened": "2025-10-08T17:49:24.055Z",
+              "WhenOpened": "2025-11-06T14:26:02.213Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "App.css",
-              "DocumentMoniker": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\App.css",
-              "RelativeDocumentMoniker": "frontend\\src\\App.css",
-              "ToolTip": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\App.css",
-              "RelativeToolTip": "frontend\\src\\App.css",
-              "ViewState": "AgIAANEAAAAAAAAAAAAQwOgAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
-              "WhenOpened": "2025-10-08T17:48:35.817Z"
+              "Title": "EmployeeLoginView.js",
+              "DocumentMoniker": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\views\\employee\\EmployeeLoginView.js",
+              "RelativeDocumentMoniker": "frontend\\src\\views\\employee\\EmployeeLoginView.js",
+              "ToolTip": "C:\\Users\\lab_services_student\\source\\repos\\InternationalPayment\\frontend\\src\\views\\employee\\EmployeeLoginView.js",
+              "RelativeToolTip": "frontend\\src\\views\\employee\\EmployeeLoginView.js",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAGQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2025-11-06T14:25:13.575Z",
+              "EditorCaption": ""
             }
           ]
         }
