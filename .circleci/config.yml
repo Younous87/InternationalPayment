@@ -263,7 +263,6 @@ jobs:
             CI=true npm test -- --coverage --coverageReporters=lcov --watchAll=false || true
       - sonarcloud/scan:
           cache_version: 1
-          scanner_version: 5.0.1
       - store_artifacts:
           path: .scannerwork
       - run:
