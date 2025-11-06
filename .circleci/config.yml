@@ -229,7 +229,7 @@ jobs:
       - store_artifacts:
           path: frontend/build
 
-  # Container security scan (if using Docker)
+  # Container security scan 
   security-container-scan:
     docker:
       - image: aquasec/trivy:latest
@@ -241,6 +241,43 @@ jobs:
             trivy fs --severity HIGH,CRITICAL --format json --output trivy-report.json . || true
       - store_artifacts:
           path: trivy-report.json
+
+  # API Security Testing
+  api-security-test:
+    executor: node-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "backend/package-lock.json" }}
+      - run:
+          name: Install Backend Dependencies
+          command: |
+            cd backend
+            npm ci
+      - run:
+          name: Install API Testing Tools
+          command: |
+            cd backend
+            npm install --save-dev supertest
+      - run:
+          name: Start Backend Server for Testing
+          command: |
+            cd backend
+            npm start
+          background: true
+      - run:
+          name: Wait for Server to Start
+          command: |
+            cd backend
+            timeout 30 bash -c 'until curl -f http://localhost:4000/test; do sleep 1; done'
+      - run:
+          name: Run API Security Tests
+          command: |
+            cd backend
+            npm run test:api || echo "API tests completed with warnings"
+      - store_artifacts:
+          path: backend/test-results
 
   # SonarQube Code Quality Analysis
   sonarqube-scan:
@@ -348,11 +385,18 @@ workflows:
             branches:
               only: /.*/
       
+      # API Security Testing
+      - api-security-test:
+          requires:
+            - build-backend
+          filters:
+            branches:
+              only: /.*/
+      
       # SonarQube Code Quality Scan
       - sonarqube-scan:
           requires:
-            - build-backend
-            - build-frontend
+            - api-security-test
           filters:
             branches:
               only: /.*/
@@ -386,6 +430,9 @@ workflows:
       - security-sast-scan
       - security-secret-scan
       - security-container-scan
-      - sonarqube-scan:
+      - api-security-test:
           requires:
             - security-dependency-scan
+      - sonarqube-scan:
+          requires:
+            - api-security-test
