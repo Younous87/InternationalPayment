@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Card from '../../components/shared/Card';
 import { PrimaryButton } from '../../components/shared/Button';
@@ -10,11 +10,7 @@ export default function EmployeeTransactionDetailView() {
     const [processing, setProcessing] = useState(false);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchTransactionDetails();
-    }, [transactionId]);
-
-    const fetchTransactionDetails = async () => {
+    const fetchTransactionDetails = useCallback(async () => {
         try {
             const token = localStorage.getItem("employeeToken");
             const response = await fetch(`https://localhost:4000/api/payments/employee/${transactionId}`, {
@@ -38,7 +34,11 @@ export default function EmployeeTransactionDetailView() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [transactionId, navigate]);
+
+    useEffect(() => {
+        fetchTransactionDetails();
+    }, [fetchTransactionDetails]);
 
     const handleSendToSwift = async () => {
         if (!window.confirm('Are you sure you want to send this transaction to SWIFT?')) {
