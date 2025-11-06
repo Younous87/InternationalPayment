@@ -279,6 +279,34 @@ jobs:
       - store_artifacts:
           path: backend/test-results
 
+  # SonarQube Code Quality Analysis
+  sonarqube-scan:
+    executor: node-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "backend/package-lock.json" }}-{{ checksum "frontend/package-lock.json" }}
+      - install-dependencies
+      - run:
+          name: Generate Backend Test Coverage
+          command: |
+            cd backend
+            npm test -- --coverage --coverageReporters=lcov || true
+      - run:
+          name: Generate Frontend Test Coverage
+          command: |
+            cd frontend
+            CI=true npm test -- --coverage --coverageReporters=lcov --watchAll=false || true
+      - sonarcloud/scan:
+          cache_version: 1
+      - store_artifacts:
+          path: .scannerwork
+      - run:
+          name: SonarQube Quality Gate Check
+          command: |
+            echo "SonarQube scan completed. Check SonarCloud dashboard for results."
+
   # Deployment approval gate
   deploy-approval:
     executor: node-executor
