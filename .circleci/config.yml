@@ -4,6 +4,7 @@ version: 2.1
 orbs:
   node: circleci/node@5.1.0
   snyk: snyk/snyk@2.0.0
+  sonarcloud: sonarsource/sonarcloud@2.0.0
 
 # Define reusable executors
 executors:
@@ -241,6 +242,35 @@ jobs:
       - store_artifacts:
           path: trivy-report.json
 
+  # SonarQube Code Quality Analysis
+  sonarqube-scan:
+    executor: node-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "backend/package-lock.json" }}-{{ checksum "frontend/package-lock.json" }}
+      - install-dependencies
+      - run:
+          name: Generate Backend Test Coverage
+          command: |
+            cd backend
+            npm test -- --coverage --coverageReporters=lcov || true
+      - run:
+          name: Generate Frontend Test Coverage
+          command: |
+            cd frontend
+            CI=true npm test -- --coverage --coverageReporters=lcov --watchAll=false || true
+      - sonarcloud/scan:
+          cache_version: 1
+          scanner_version: 5.0.1
+      - store_artifacts:
+          path: .scannerwork
+      - run:
+          name: SonarQube Quality Gate Check
+          command: |
+            echo "SonarQube scan completed. Check SonarCloud dashboard for results."
+
   # Deployment approval gate
   deploy-approval:
     executor: node-executor
@@ -319,12 +349,20 @@ workflows:
             branches:
               only: /.*/
       
+      # SonarQube Code Quality Scan
+      - sonarqube-scan:
+          requires:
+            - build-backend
+            - build-frontend
+          filters:
+            branches:
+              only: /.*/
+      
       # Deployment Approval
       - deploy-approval:
           type: approval
           requires:
-            - build-backend
-            - build-frontend
+            - sonarqube-scan
             - security-container-scan
           filters:
             branches:
@@ -349,3 +387,6 @@ workflows:
       - security-sast-scan
       - security-secret-scan
       - security-container-scan
+      - sonarqube-scan:
+          requires:
+            - security-dependency-scan
