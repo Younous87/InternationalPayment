@@ -1,5 +1,9 @@
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import dotenv from "dotenv";
+
+// Ensure environment variables are loaded before reading PASSWORD_PEPPER
+dotenv.config();
 
 /**
  * Password Security Utility
@@ -12,8 +16,13 @@ import crypto from "crypto";
  */
 
 // Pepper: A secret key stored separately from the database
-// In production, this should be in environment variables
-const PEPPER = process.env.PASSWORD_PEPPER || crypto.randomBytes(32).toString('hex');
+const envPepper = process.env.PASSWORD_PEPPER ? process.env.PASSWORD_PEPPER.trim() : "";
+
+if (!envPepper) {
+    console.warn("PASSWORD_PEPPER is missing. Generating a temporary value. Passwords will break after restart.");
+}
+
+const PEPPER = envPepper || crypto.randomBytes(32).toString('hex');
 
 /**
  * bcrypt salt rounds
