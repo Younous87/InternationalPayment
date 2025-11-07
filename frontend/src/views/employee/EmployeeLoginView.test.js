@@ -5,6 +5,46 @@ import EmployeeLoginView from './EmployeeLoginView';
 // Mock fetch
 global.fetch = jest.fn();
 
+// Mock navigate and alert
+const mockNavigate = jest.fn();
+global.alert = jest.fn();
+
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockNavigate,
+}));
+
+const setup = () => {
+  const mockSetItem = jest.fn();
+  Object.defineProperty(window, 'localStorage', {
+    value: { setItem: mockSetItem },
+    writable: true,
+  });
+
+  render(
+    <MemoryRouter>
+      <EmployeeLoginView />
+    </MemoryRouter>
+  );
+
+  const usernameInput = screen.getByPlaceholderText(/username/i);
+  const accountInput = screen.getByPlaceholderText(/employee number/i);
+  const passwordInput = screen.getByPlaceholderText(/password/i);
+  const loginButton = screen.getByRole('button', { name: /login/i });
+
+  return {
+    mockSetItem,
+    usernameInput,
+    accountInput,
+    passwordInput,
+    loginButton,
+  };
+};
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
 test('renders employee login form', () => {
   render(
     <MemoryRouter>
@@ -15,102 +55,87 @@ test('renders employee login form', () => {
   expect(loginButton).toBeInTheDocument();
 });
 
-test('renders form inputs', () => {
-  render(
-    <MemoryRouter>
-      <EmployeeLoginView />
-    </MemoryRouter>
-  );
-  const usernameInput = screen.getByPlaceholderText(/username/i);
-  const passwordInput = screen.getByPlaceholderText(/password/i);
-  expect(usernameInput).toBeInTheDocument();
-  expect(passwordInput).toBeInTheDocument();
-});
-
-test('handles input changes', () => {
-  render(
-    <MemoryRouter>
-      <EmployeeLoginView />
-    </MemoryRouter>
-  );
-  const usernameInput = screen.getByPlaceholderText(/username/i);
-  const passwordInput = screen.getByPlaceholderText(/password/i);
-
-  fireEvent.change(usernameInput, { target: { value: 'testuser' } });
-  fireEvent.change(passwordInput, { target: { value: 'testpass' } });
-
-  expect(usernameInput.value).toBe('testuser');
-  expect(passwordInput.value).toBe('testpass');
-});
-
-test('handles successful login', async () => {
-  // Mock successful login
+test('handles successful login for employee', async () => {
   fetch.mockResolvedValueOnce({
     ok: true,
-    json: async () => ({ token: 'test-token', employee: { id: 1 } }),
+    headers: {
+      get: () => 'application/json',
+    },
+    json: async () => ({
+      token: 'test-token',
+      user: { id: '1', accountType: 'employee' },
+    }),
   });
 
-  // Mock localStorage
-  const mockSetItem = jest.fn();
-  Object.defineProperty(window, 'localStorage', {
-    value: { setItem: mockSetItem },
-    writable: true,
-  });
-
-  // Mock alert
-  global.alert = jest.fn();
-
-  render(
-    <MemoryRouter>
-      <EmployeeLoginView />
-    </MemoryRouter>
-  );
-
-  const usernameInput = screen.getByPlaceholderText(/username/i);
-  const passwordInput = screen.getByPlaceholderText(/password/i);
-  const loginButton = screen.getByRole('button', { name: /login/i });
+  const { usernameInput, accountInput, passwordInput, loginButton, mockSetItem } = setup();
 
   fireEvent.change(usernameInput, { target: { value: 'testuser' } });
-  fireEvent.change(passwordInput, { target: { value: 'testpass' } });
+  fireEvent.change(accountInput, { target: { value: '123456' } });
+  fireEvent.change(passwordInput, { target: { value: 'testpass1' } });
   fireEvent.click(loginButton);
 
   await waitFor(() => {
     expect(fetch).toHaveBeenCalledWith(
-      'https://localhost:4000/api/auth/employee/login',
+      'https://localhost:4000/api/auth/login',
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'testuser', password: 'testpass' }),
+        body: JSON.stringify({
+          username: 'testuser',
+          accountNumber: '123456',
+          password: 'testpass1',
+        }),
       })
     );
   });
 
   expect(mockSetItem).toHaveBeenCalledWith('employeeToken', 'test-token');
   expect(global.alert).toHaveBeenCalledWith('Login Successful!');
+  expect(mockNavigate).toHaveBeenCalledWith('/employee/transactions', { replace: true });
 });
 
-test('handles login failure', async () => {
-  // Mock failed login
+test('blocks non-employee account type', async () => {
+  fetch.mockResolvedValueOnce({
+    ok: true,
+    headers: {
+      get: () => 'application/json',
+    },
+    json: async () => ({
+      token: 'test-token',
+      user: { id: '1', accountType: 'client' },
+    }),
+  });
+
+  const { usernameInput, accountInput, passwordInput, loginButton, mockSetItem } = setup();
+
+  fireEvent.change(usernameInput, { target: { value: 'testuser' } });
+  fireEvent.change(accountInput, { target: { value: '123456' } });
+  fireEvent.change(passwordInput, { target: { value: 'testpass1' } });
+  fireEvent.click(loginButton);
+
+  await waitFor(() => {
+    expect(fetch).toHaveBeenCalled();
+  });
+
+  expect(global.alert).toHaveBeenCalledWith('This portal is restricted to employees.');
+  expect(mockSetItem).not.toHaveBeenCalled();
+  expect(mockNavigate).not.toHaveBeenCalled();
+});
+
+test('handles login failure from API', async () => {
   fetch.mockResolvedValueOnce({
     ok: false,
+    headers: {
+      get: () => 'application/json',
+    },
     json: async () => ({ message: 'Invalid credentials' }),
   });
 
-  // Mock alert
-  global.alert = jest.fn();
-
-  render(
-    <MemoryRouter>
-      <EmployeeLoginView />
-    </MemoryRouter>
-  );
-
-  const usernameInput = screen.getByPlaceholderText(/username/i);
-  const passwordInput = screen.getByPlaceholderText(/password/i);
-  const loginButton = screen.getByRole('button', { name: /login/i });
+  const { usernameInput, accountInput, passwordInput, loginButton } = setup();
 
   fireEvent.change(usernameInput, { target: { value: 'wronguser' } });
-  fireEvent.change(passwordInput, { target: { value: 'wrongpass' } });
+  fireEvent.change(accountInput, { target: { value: '123456' } });
+  fireEvent.change(passwordInput, { target: { value: 'wrongpass1' } });
   fireEvent.click(loginButton);
 
   await waitFor(() => {
@@ -121,24 +146,13 @@ test('handles login failure', async () => {
 });
 
 test('handles network error', async () => {
-  // Mock network error
   fetch.mockRejectedValueOnce(new Error('Network error'));
 
-  // Mock alert
-  global.alert = jest.fn();
-
-  render(
-    <MemoryRouter>
-      <EmployeeLoginView />
-    </MemoryRouter>
-  );
-
-  const usernameInput = screen.getByPlaceholderText(/username/i);
-  const passwordInput = screen.getByPlaceholderText(/password/i);
-  const loginButton = screen.getByRole('button', { name: /login/i });
+  const { usernameInput, accountInput, passwordInput, loginButton } = setup();
 
   fireEvent.change(usernameInput, { target: { value: 'testuser' } });
-  fireEvent.change(passwordInput, { target: { value: 'testpass' } });
+  fireEvent.change(accountInput, { target: { value: '123456' } });
+  fireEvent.change(passwordInput, { target: { value: 'testpass1' } });
   fireEvent.click(loginButton);
 
   await waitFor(() => {

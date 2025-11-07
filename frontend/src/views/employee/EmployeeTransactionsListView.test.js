@@ -10,6 +10,7 @@ const mockGetItem = jest.fn();
 Object.defineProperty(window, 'localStorage', {
   value: {
     getItem: mockGetItem,
+    removeItem: jest.fn(),
   },
 });
 
@@ -23,9 +24,26 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
-test('renders employee transactions list', async () => {
-  mockGetItem.mockReturnValue('test-token');
+const setEmployeeContext = () => {
+  mockGetItem.mockImplementation((key) => {
+    if (key === 'employeeToken') {
+      return 'test-token';
+    }
+    if (key === 'employee') {
+      return JSON.stringify({ accountType: 'employee' });
+    }
+    return null;
+  });
+};
 
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockGetItem.mockReset();
+  fetch.mockReset();
+  setEmployeeContext();
+});
+
+test('renders employee transactions list', async () => {
   // Mock successful fetch
   fetch.mockResolvedValueOnce({
     ok: true,
@@ -45,8 +63,6 @@ test('renders employee transactions list', async () => {
 });
 
 test('shows loading state initially', () => {
-  mockGetItem.mockReturnValue('test-token');
-
   // Mock pending fetch
   fetch.mockImplementation(() => new Promise(() => {}));
 
@@ -60,8 +76,6 @@ test('shows loading state initially', () => {
 });
 
 test('renders transactions list with data', async () => {
-  mockGetItem.mockReturnValue('test-token');
-
   const mockTransactions = [
     {
       _id: '1',
@@ -104,8 +118,6 @@ test('renders transactions list with data', async () => {
 });
 
 test('handles fetch error', async () => {
-  mockGetItem.mockReturnValue('test-token');
-
   // Mock failed fetch
   fetch.mockResolvedValueOnce({
     ok: false,
@@ -121,11 +133,12 @@ test('handles fetch error', async () => {
   await waitFor(() => {
     expect(global.alert).toHaveBeenCalledWith('Failed to fetch transactions');
   });
+
+  expect(screen.getByText('Failed to fetch transactions')).toBeInTheDocument();
+  expect(screen.getByText('Retry')).toBeInTheDocument();
 });
 
 test('handles network error', async () => {
-  mockGetItem.mockReturnValue('test-token');
-
   // Mock network error
   fetch.mockRejectedValueOnce(new Error('Network error'));
 
@@ -141,8 +154,6 @@ test('handles network error', async () => {
 });
 
 test('handles view details button click', async () => {
-  mockGetItem.mockReturnValue('test-token');
-
   const mockTransactions = [
     {
       _id: '1',
@@ -176,8 +187,6 @@ test('handles view details button click', async () => {
 });
 
 test('handles back button click', async () => {
-  mockGetItem.mockReturnValue('test-token');
-
   // Mock successful fetch
   fetch.mockResolvedValueOnce({
     ok: true,
@@ -198,4 +207,18 @@ test('handles back button click', async () => {
   fireEvent.click(backButton);
 
   expect(mockNavigate).toHaveBeenCalledWith('/employee/login');
+});
+
+test('redirects to login when token missing', async () => {
+  mockGetItem.mockImplementation(() => null);
+
+  render(
+    <MemoryRouter>
+      <EmployeeTransactionsListView />
+    </MemoryRouter>
+  );
+
+  await waitFor(() => {
+    expect(mockNavigate).toHaveBeenCalledWith('/employee/login', { replace: true });
+  });
 });
