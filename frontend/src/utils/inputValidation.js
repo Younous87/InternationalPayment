@@ -15,16 +15,41 @@ const INJECTION_PATTERNS = [
   /(\$where|\$regex|\$gt|\$lt|\$ne|\$in|\$nin|\$or|\$and)/i, // NoSQL
   /<script[^>]*>|onerror=|onload=|javascript:/i, // XSS
   /(&&|\|\||\b(cat|ls|rm|touch|curl|wget)\b)/i, // Command injection
-  /(\.\.\/|\.\.\\|\/[A-Za-z0-9_\-]+\/)/, // Path traversal
+  /(\.\.\/|\.\.\\|\/[A-Za-z0-9_-]+\/)/, // Path traversal
   /\0/ // Null byte
 ];
 
 export function validateAgainstWhitelist(value, type) {
-  const regex = WHITELIST_PATTERNS[type];
-  if (!regex) {
-    return { isValid: false, error: `Unknown whitelist type: ${type}` };
+  const str = String(value || '').trim();
+  let regex;
+
+  switch (type) {
+    case 'alphanumeric':
+      regex = WHITELIST_PATTERNS.alphanumeric;
+      break;
+    case 'username':
+      regex = WHITELIST_PATTERNS.username;
+      break;
+    case 'email':
+      regex = WHITELIST_PATTERNS.email;
+      break;
+    case 'idNumber':
+      regex = WHITELIST_PATTERNS.idNumber;
+      break;
+    case 'accountNumber':
+      regex = WHITELIST_PATTERNS.accountNumber;
+      break;
+    case 'address':
+      regex = WHITELIST_PATTERNS.address;
+      break;
+    case 'fullname':
+      regex = WHITELIST_PATTERNS.fullname;
+      break;
+    default:
+      return { isValid: false, error: `Unknown whitelist type: ${type}` };
   }
-  const isValid = regex.test(String(value || '').trim());
+
+  const isValid = regex.test(str);
   return { isValid, error: isValid ? null : `Invalid ${type}` };
 }
 

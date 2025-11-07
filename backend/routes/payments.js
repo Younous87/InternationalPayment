@@ -27,6 +27,14 @@ const verifyToken = (req, res, next) => {
     }
 };
 
+// Middleware to check if user is employee
+const verifyEmployee = (req, res, next) => {
+    if (req.user.accountType !== 'employee') {
+        return res.status(403).json({ message: "Access denied. Employee role required." });
+    }
+    next();
+};
+
 // Create a new payment transaction
 router.post("/create", verifyToken, async (req, res) => {
     try {
@@ -97,7 +105,7 @@ router.post("/create", verifyToken, async (req, res) => {
             beneficiaryBankName: beneficiaryBankName || "Default Bank",
             swiftCode,
             beneficiaryAddress: beneficiaryAddress || "Default Address",
-            status: 'completed' // Auto-complete for demo/testing
+            status: 'pending' // Set to pending for employee verification
         });
 
         await newPayment.save();
@@ -129,6 +137,23 @@ router.get("/my-payments", verifyToken, async (req, res) => {
             .sort({ createdAt: -1 })
             .select('-__v')
             .populate('userId', 'username email');
+
+        res.json({
+            payments,
+            count: payments.length
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get all pending payments (for employees to verify)
+router.get("/pending", verifyToken, verifyEmployee, async (req, res) => {
+    try {
+        const payments = await Payment.find({ status: 'pending' })
+            .sort({ createdAt: -1 })
+            .select('-__v')
+            .populate('userId', 'username email fullname accountNumber');
 
         res.json({
             payments,
@@ -289,6 +314,101 @@ router.get("/providers/supported", (req, res) => {
     ];
 
     res.json({ providers: supportedProviders });
+});
+
+// Get transaction details for employees (any transaction)
+router.get("/employee/:transactionId", verifyToken, verifyEmployee, async (req, res) => {
+    try {
+        const { transactionId } = req.params;
+
+        // Validate transactionId against whitelist and injection patterns
+        const txnCheck = validateAgainstWhitelist(transactionId, 'alphanumeric');
+        const txnThreats = checkForInjectionPatterns(transactionId);
+        if (!txnCheck.isValid || !txnThreats.isSafe) {
+            return res.status(400).json({ message: "Invalid transactionId" });
+        }
+        
+        const payment = await Payment.findOne({ transactionId })
+            .populate('userId', 'username email fullname accountNumber');
+
+        if (!payment) {
+            return res.status(404).json({ message: "Transaction not found" });
+        }
+
+        res.json({ payment });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Approve transaction (send to SWIFT) - for employees
+router.post("/employee/:transactionId/approve", verifyToken, verifyEmployee, async (req, res) => {
+    try {
+        const { transactionId } = req.params;
+
+        // Validate transactionId
+        const txnCheck = validateAgainstWhitelist(transactionId, 'alphanumeric');
+        const txnThreats = checkForInjectionPatterns(transactionId);
+        if (!txnCheck.isValid || !txnThreats.isSafe) {
+            return res.status(400).json({ message: "Invalid transactionId" });
+        }
+
+        const payment = await Payment.findOneAndUpdate(
+            { transactionId, status: 'pending' },
+            { status: 'processing', updatedAt: Date.now() },
+            { new: true }
+        );
+
+        if (!payment) {
+            return res.status(404).json({ message: "Transaction not found or not in pending status" });
+        }
+
+        res.json({
+            message: "Transaction approved and sent to SWIFT successfully",
+            payment: {
+                transactionId: payment.transactionId,
+                status: payment.status,
+                updatedAt: payment.updatedAt
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Reject transaction - for employees
+router.post("/employee/:transactionId/reject", verifyToken, verifyEmployee, async (req, res) => {
+    try {
+        const { transactionId } = req.params;
+
+        // Validate transactionId
+        const txnCheck = validateAgainstWhitelist(transactionId, 'alphanumeric');
+        const txnThreats = checkForInjectionPatterns(transactionId);
+        if (!txnCheck.isValid || !txnThreats.isSafe) {
+            return res.status(400).json({ message: "Invalid transactionId" });
+        }
+
+        const payment = await Payment.findOneAndUpdate(
+            { transactionId, status: 'pending' },
+            { status: 'cancelled', updatedAt: Date.now() },
+            { new: true }
+        );
+
+        if (!payment) {
+            return res.status(404).json({ message: "Transaction not found or not in pending status" });
+        }
+
+        res.json({
+            message: "Transaction rejected successfully",
+            payment: {
+                transactionId: payment.transactionId,
+                status: payment.status,
+                updatedAt: payment.updatedAt
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 export default router;

@@ -3,12 +3,16 @@ import { Link } from 'react-router-dom';
 import Card from '../../components/shared/Card';
 import { FormGroup, FormInput } from '../../components/shared/Form';
 import { PrimaryButton } from '../../components/shared/Button';
+import { sanitizeInput, validateAgainstWhitelist } from '../../utils/inputValidation';
 
 export default function RecoverUsernameView() {
     const [formData, setFormData] = useState({
         email: ''
     });
     const [step, setStep] = useState(1); // 1: email, 2: success
+    const [loading, setLoading] = useState(false);
+    const [feedback, setFeedback] = useState('');
+    const [error, setError] = useState('');
 
     const handleChange = (event) => {
         const { name, value } = event.target;
@@ -17,25 +21,49 @@ export default function RecoverUsernameView() {
 
     const handleSendCode = async (event) => {
         event.preventDefault();
-        const { email } = formData;
+        if (loading) return;
+
+        const sanitizedEmail = sanitizeInput(formData.email).toLowerCase();
+        const emailCheck = validateAgainstWhitelist(sanitizedEmail, 'email');
+        if (!emailCheck.isValid) {
+            setError('Please enter a valid email address.');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+        setFeedback('');
 
         try {
-            const response = await fetch("https://localhost:4000/api/auth/recover-username", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email }),
+            const response = await fetch('https://localhost:4000/api/auth/recover-username', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: sanitizedEmail }),
             });
 
-            const data = await response.json();
+            const isJson = (response.headers.get('content-type') || '').includes('application/json');
+            const data = isJson ? await response.json() : {};
 
             if (response.ok) {
                 setStep(2);
+                let message = data.message || 'If an account exists, your username has been sent to the email provided.';
+                if (data?.developmentOnly?.username) {
+                    message = `${message} (Dev username: ${data.developmentOnly.username})`;
+                }
+                setFeedback(message);
+                setFormData({ email: sanitizedEmail });
             } else {
-                alert(data.message || "Failed to send username");
+                const message = data.message || 'Failed to send username';
+                setError(message);
+                alert(message);
             }
         } catch (error) {
             // Error sending username recovery
-            alert("Something went wrong. Try again.");
+            const message = error?.message || 'Something went wrong. Try again.';
+            setError(message);
+            alert(message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -48,6 +76,8 @@ export default function RecoverUsernameView() {
                             🔄
                         </div>
                         <h1 className="card-title">Recover Username</h1>
+                        {feedback && <p className="card-subtitle">{feedback}</p>}
+                        {error && <p className="error-text" role="alert">{error}</p>}
                     </div>
 
                     <form onSubmit={handleSendCode}>
@@ -62,8 +92,8 @@ export default function RecoverUsernameView() {
                             />
                         </FormGroup>
 
-                        <PrimaryButton type="submit">
-                            Send Code
+                        <PrimaryButton type="submit" disabled={loading}>
+                            {loading ? 'Sending…' : 'Send Code'}
                         </PrimaryButton>
                     </form>
                 </Card>
@@ -83,6 +113,8 @@ export default function RecoverUsernameView() {
                         <p className="card-subtitle">
                             Your username has been sent to your email address.
                         </p>
+                        {feedback && <p className="card-subtitle">{feedback}</p>}
+                        {error && <p className="error-text" role="alert">{error}</p>}
                     </div>
 
                     <PrimaryButton>

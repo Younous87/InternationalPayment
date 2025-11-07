@@ -22,16 +22,11 @@ export default function HomeView() {
                     </PrimaryButton>
 
                     <SecondaryButton>
-                        <Link to="/register" style={{ textDecoration: 'none', color: 'inherit' }}>
-                            Register
+                        <Link to="/employee/login" style={{ textDecoration: 'none', color: 'inherit' }}>
+                            Employee Login
                         </Link>
                     </SecondaryButton>
 
-                    <SecondaryButton>
-                        <Link to="/verify-transactions" style={{ textDecoration: 'none', color: 'inherit' }}>
-                            Verify Transactions
-                        </Link>
-                    </SecondaryButton>
                 </div>
             </Card>
         </div>

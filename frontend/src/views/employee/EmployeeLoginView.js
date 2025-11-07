@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
-import { validateAgainstWhitelist, checkForInjectionPatterns, sanitizeInput } from '../../utils/inputValidation';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import {
+    validateAgainstWhitelist,
+    checkForInjectionPatterns,
+    sanitizeInput
+} from '../../utils/inputValidation';
 import Card from '../../components/shared/Card';
 import { FormGroup, FormInput } from '../../components/shared/Form';
 import { PrimaryButton } from '../../components/shared/Button';
@@ -11,6 +15,8 @@ export default function EmployeeLoginView() {
         accountNumber: '',
         password: ''
     });
+    const [submitting, setSubmitting] = useState(false);
+    const navigate = useNavigate();
 
     const handleChange = (event) => {
         const { name, value } = event.target;
@@ -19,6 +25,10 @@ export default function EmployeeLoginView() {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
+        if (submitting) {
+            return;
+        }
+
         const { username, accountNumber, password } = formData;
 
         // Client-side validation using whitelist and regex patterns
@@ -33,7 +43,7 @@ export default function EmployeeLoginView() {
             return;
         }
         if (!accountCheck.isValid) {
-            alert('Invalid account number');
+            alert('Invalid employee number format');
             return;
         }
         if (!password || password.length < 8 || !passwordThreats.isSafe) {
@@ -41,38 +51,41 @@ export default function EmployeeLoginView() {
             return;
         }
 
+        setSubmitting(true);
+
         try {
-            // Use existing backend login endpoint
-            const response = await fetch("https://localhost:4000/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                // Send accountNumber as a string to avoid precision issues on large numbers
-                body: JSON.stringify({ username: usernameSanitized, accountNumber: accountSanitized, password }),
+            const response = await fetch('https://localhost:4000/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: usernameSanitized,
+                    accountNumber: accountSanitized,
+                    password
+                })
             });
 
             const isJson = (response.headers.get('content-type') || '').includes('application/json');
             const data = isJson ? await response.json() : {};
 
             if (!response.ok) {
-                alert(data.message || "Login Failed");
+                alert(data.message || 'Login failed');
                 return;
             }
 
-            localStorage.setItem("employeeToken", data.token);
-            localStorage.setItem("employee", JSON.stringify(data.user));
-
-            alert("Login Successful!");
-            const accountType = data?.user?.accountType;
-            if (accountType === 'employee') {
-                window.location.href = "/employee/transactions";
-            } else {
-                // Non-employee fallback
-                alert("This area is restricted to employees. Redirecting to your dashboard.");
-                window.location.href = "/dashboard";
+            if (data?.user?.accountType !== 'employee') {
+                alert('This portal is restricted to employees.');
+                return;
             }
+
+            localStorage.setItem('employeeToken', data.token);
+            localStorage.setItem('employee', JSON.stringify(data.user));
+
+            alert('Login Successful!');
+            navigate('/employee/transactions', { replace: true });
         } catch (error) {
-            console.error('Employee login failed:', error);
-            alert(error?.message || "Something went wrong. Try again.");
+            alert(error?.message || 'Something went wrong. Try again.');
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -103,7 +116,7 @@ export default function EmployeeLoginView() {
                         type="text"
                         value={formData.accountNumber}
                         name="accountNumber"
-                        placeholder="Account Number"
+                        placeholder="Employee Number"
                         onChange={handleChange}
                         required
                     />
@@ -120,9 +133,13 @@ export default function EmployeeLoginView() {
                     />
                 </FormGroup>
 
-                    <PrimaryButton type="submit">
-                        Login
+                    <PrimaryButton type="submit" disabled={submitting}>
+                        {submitting ? 'Signing In…' : 'Login'}
                     </PrimaryButton>
+
+                    <div className="link-text">
+                        <Link to="/">← Back to Home</Link>
+                    </div>
 
                     <div className="link-text">
                         <Link to="/recover-password">Forgot Password?</Link>
@@ -132,9 +149,6 @@ export default function EmployeeLoginView() {
                         <Link to="/recoverUsername">Forgot Username?</Link>
                     </div>
 
-                    <div className="link-text">
-                        <Link to="/register">Register</Link>
-                    </div>
                 </form>
             </Card>
         </div>

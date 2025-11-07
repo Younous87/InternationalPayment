@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Card from '../../components/shared/Card';
 import { FormGroup, FormInput } from '../../components/shared/Form';
 import { PrimaryButton, SecondaryButton } from '../../components/shared/Button';
+import {
+    sanitizeInput,
+    validateAgainstWhitelist,
+    checkForInjectionPatterns
+} from '../../utils/inputValidation';
 
 export default function LoginView() {
     const [formData, setFormData] = useState({
@@ -10,6 +15,9 @@ export default function LoginView() {
         accountNumber: '',
         password: ''
     });
+    const [error, setError] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const navigate = useNavigate();
 
     const handleChange = (event) => {
         const { name, value } = event.target;
@@ -18,30 +26,70 @@ export default function LoginView() {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        const { username, accountNumber, password } = formData;
+        if (submitting) {
+            return;
+        }
+
+        setError('');
+
+        const usernameSanitized = sanitizeInput(formData.username);
+        const accountSanitized = sanitizeInput(String(formData.accountNumber));
+        const passwordValue = formData.password;
+
+        const usernameCheck = validateAgainstWhitelist(usernameSanitized, 'username');
+        if (!usernameCheck.isValid) {
+            setError('Invalid username format. Use 3-20 letters, numbers, or underscores.');
+            return;
+        }
+
+        const accountCheck = validateAgainstWhitelist(accountSanitized, 'accountNumber');
+        if (!accountCheck.isValid) {
+            setError('Account number must be 8-18 digits.');
+            return;
+        }
+
+        if (!passwordValue || passwordValue.length < 8) {
+            setError('Password must be at least 8 characters long.');
+            return;
+        }
+
+        const passwordThreats = checkForInjectionPatterns(passwordValue);
+        if (!passwordThreats.isSafe) {
+            setError('Password contains prohibited characters.');
+            return;
+        }
+
+        setSubmitting(true);
 
         try {
             const response = await fetch("https://localhost:4000/api/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, accountNumber, password }),
+                body: JSON.stringify({
+                    username: usernameSanitized,
+                    accountNumber: accountSanitized,
+                    password: passwordValue
+                }),
             });
 
-            const data = await response.json();
+            const isJson = (response.headers.get('content-type') || '').includes('application/json');
+            const data = isJson ? await response.json() : {};
 
             if (!response.ok) {
-                alert(data.message || "Login Failed");
+                setError(data.message || "Login failed. Please check your credentials.");
                 return;
             }
 
             localStorage.setItem("token", data.token);
             localStorage.setItem("user", JSON.stringify(data.user));
 
-            alert("Login Successful!");
-            window.location.href = "/dashboard";
+            setError('');
+            navigate('/dashboard', { replace: true });
         } catch (error) {
             // Login error occurred
-            alert("Something went wrong. Try again.");
+            setError(error?.message || "Something went wrong. Try again.");
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -54,6 +102,12 @@ export default function LoginView() {
                     </div>
                     <h1 className="card-title">Welcome</h1>
                 </div>
+
+                {error && (
+                    <div className="error-text" role="alert">
+                        {error}
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit}>
                     <FormGroup>
@@ -89,8 +143,8 @@ export default function LoginView() {
                         />
                     </FormGroup>
 
-                    <PrimaryButton type="submit">
-                        Login
+                    <PrimaryButton type="submit" disabled={submitting}>
+                        {submitting ? 'Signing In…' : 'Login'}
                     </PrimaryButton>
 
                     <SecondaryButton>
@@ -98,6 +152,10 @@ export default function LoginView() {
                             Register
                         </Link>
                     </SecondaryButton>
+
+                    <div className="link-text">
+                        <Link to="/">← Back to Home</Link>
+                    </div>
 
                     <div className="link-text">
                         <Link to="/recover-password">Forgot Password?</Link>

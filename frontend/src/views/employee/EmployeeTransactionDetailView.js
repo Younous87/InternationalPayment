@@ -9,9 +9,40 @@ export default function EmployeeTransactionDetailView() {
     const [transaction, setTransaction] = useState(null);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    const fetchTransactionDetails = useCallback(async () => {
+    const ensureEmployeeAccess = useCallback(() => {
+        const token = localStorage.getItem('employeeToken');
+        const employeeRaw = localStorage.getItem('employee');
+
+        if (!token) {
+            setLoading(false);
+            navigate('/employee/login', { replace: true });
+            return null;
+        }
+
+        if (employeeRaw) {
+            try {
+                const employee = JSON.parse(employeeRaw);
+                if (employee?.accountType !== 'employee') {
+                    setLoading(false);
+                    navigate('/employee/login', { replace: true });
+                    return null;
+                }
+            } catch (parseError) {
+                localStorage.removeItem('employee');
+                setLoading(false);
+                navigate('/employee/login', { replace: true });
+                return null;
+            }
+        }
+
+        return token;
+    }, [navigate]);
+
+    const fetchTransactionDetails = useCallback(async (options = {}) => {
+        const { silent = false } = options;
         try {
             // Validate transactionId using whitelist
             const txnCheck = validateAgainstWhitelist(transactionId, 'alphanumeric');
@@ -20,7 +51,14 @@ export default function EmployeeTransactionDetailView() {
                 navigate('/employee/transactions');
                 return;
             }
-            const token = localStorage.getItem("employeeToken");
+            const token = ensureEmployeeAccess();
+            if (!token) {
+                return;
+            }
+
+            if (!silent) {
+                setLoading(true);
+            }
             const response = await fetch(`https://localhost:4000/api/payments/employee/${transactionId}`, {
                 method: "GET",
                 headers: {
@@ -28,21 +66,29 @@ export default function EmployeeTransactionDetailView() {
                 },
             });
 
-            const data = await response.json();
+            const isJson = (response.headers.get('content-type') || '').includes('application/json');
+            const data = isJson ? await response.json() : {};
 
             if (response.ok) {
                 setTransaction(data.payment);
+                setError('');
             } else {
-                alert(data.message || "Transaction not found");
+                const message = data.message || "Transaction not found";
+                setError(message);
+                alert(message);
                 navigate('/employee/transactions');
             }
         } catch (error) {
-            alert("Something went wrong. Try again.");
+            const message = error?.message || "Something went wrong. Try again.";
+            setError(message);
+            alert(message);
             navigate('/employee/transactions');
         } finally {
-            setLoading(false);
+            if (!silent) {
+                setLoading(false);
+            }
         }
-    }, [transactionId, navigate]);
+    }, [transactionId, navigate, ensureEmployeeAccess]);
 
     useEffect(() => {
         fetchTransactionDetails();
@@ -61,7 +107,11 @@ export default function EmployeeTransactionDetailView() {
                 setProcessing(false);
                 return;
             }
-            const token = localStorage.getItem("employeeToken");
+            const token = ensureEmployeeAccess();
+            if (!token) {
+                setProcessing(false);
+                return;
+            }
             const response = await fetch(`https://localhost:4000/api/payments/employee/${transactionId}/approve`, {
                 method: "POST",
                 headers: {
@@ -71,11 +121,12 @@ export default function EmployeeTransactionDetailView() {
                 body: JSON.stringify({ action: 'send_to_swift' }),
             });
 
-            const data = await response.json();
+            const isJson = (response.headers.get('content-type') || '').includes('application/json');
+            const data = isJson ? await response.json() : {};
 
             if (response.ok) {
                 alert("Transaction sent to SWIFT successfully!");
-                navigate('/employee/transactions');
+                await fetchTransactionDetails({ silent: true });
             } else {
                 alert(data.message || "Failed to send transaction to SWIFT");
             }
@@ -99,7 +150,11 @@ export default function EmployeeTransactionDetailView() {
                 setProcessing(false);
                 return;
             }
-            const token = localStorage.getItem("employeeToken");
+            const token = ensureEmployeeAccess();
+            if (!token) {
+                setProcessing(false);
+                return;
+            }
             const response = await fetch(`https://localhost:4000/api/payments/employee/${transactionId}/reject`, {
                 method: "POST",
                 headers: {
@@ -108,11 +163,12 @@ export default function EmployeeTransactionDetailView() {
                 },
             });
 
-            const data = await response.json();
+            const isJson = (response.headers.get('content-type') || '').includes('application/json');
+            const data = isJson ? await response.json() : {};
 
             if (response.ok) {
                 alert("Transaction rejected successfully!");
-                navigate('/employee/transactions');
+                await fetchTransactionDetails({ silent: true });
             } else {
                 alert(data.message || "Failed to reject transaction");
             }
@@ -156,6 +212,12 @@ export default function EmployeeTransactionDetailView() {
                     </div>
                     <h1 className="card-title">Verify Transactions</h1>
                 </div>
+
+                {error && (
+                    <div className="error-text" role="alert">
+                        {error}
+                    </div>
+                )}
 
                 <div className="transaction-details">
                     <div className="transaction-detail">
