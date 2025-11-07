@@ -46,10 +46,12 @@ export default function EmployeeLoginView() {
             const response = await fetch("https://localhost:4000/api/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username: usernameSanitized, accountNumber: Number(accountSanitized), password }),
+                // Send accountNumber as a string to avoid precision issues on large numbers
+                body: JSON.stringify({ username: usernameSanitized, accountNumber: accountSanitized, password }),
             });
 
-            const data = await response.json();
+            const isJson = (response.headers.get('content-type') || '').includes('application/json');
+            const data = isJson ? await response.json() : {};
 
             if (!response.ok) {
                 alert(data.message || "Login Failed");
@@ -60,9 +62,17 @@ export default function EmployeeLoginView() {
             localStorage.setItem("employee", JSON.stringify(data.user));
 
             alert("Login Successful!");
-            window.location.href = "/employee/transactions";
+            const accountType = data?.user?.accountType;
+            if (accountType === 'employee') {
+                window.location.href = "/employee/transactions";
+            } else {
+                // Non-employee fallback
+                alert("This area is restricted to employees. Redirecting to your dashboard.");
+                window.location.href = "/dashboard";
+            }
         } catch (error) {
-            alert("Something went wrong. Try again.");
+            console.error('Employee login failed:', error);
+            alert(error?.message || "Something went wrong. Try again.");
         }
     };
 
