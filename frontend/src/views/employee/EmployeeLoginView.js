@@ -103,7 +103,7 @@ export default function EmployeeLoginView() {
                         type="text"
                         value={formData.accountNumber}
                         name="accountNumber"
-                        placeholder="Account Number"
+                        placeholder="Employee Number"
                         onChange={handleChange}
                         required
                     />
@@ -125,6 +125,10 @@ export default function EmployeeLoginView() {
                     </PrimaryButton>
 
                     <div className="link-text">
+                        <Link to="/">← Back to Home</Link>
+                    </div>
+
+                    <div className="link-text">
                         <Link to="/recover-password">Forgot Password?</Link>
                     </div>
 
@@ -132,9 +136,6 @@ export default function EmployeeLoginView() {
                         <Link to="/recoverUsername">Forgot Username?</Link>
                     </div>
 
-                    <div className="link-text">
-                        <Link to="/register">Register</Link>
-                    </div>
                 </form>
             </Card>
         </div>

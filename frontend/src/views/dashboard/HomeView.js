@@ -27,17 +27,6 @@ export default function HomeView() {
                         </Link>
                     </SecondaryButton>
 
-                    <SecondaryButton>
-                        <Link to="/register" style={{ textDecoration: 'none', color: 'inherit' }}>
-                            Register
-                        </Link>
-                    </SecondaryButton>
-
-                    <SecondaryButton>
-                        <Link to="/verify-transactions" style={{ textDecoration: 'none', color: 'inherit' }}>
-                            Verify Transactions
-                        </Link>
-                    </SecondaryButton>
                 </div>
             </Card>
         </div>

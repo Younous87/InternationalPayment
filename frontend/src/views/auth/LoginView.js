@@ -100,6 +100,10 @@ export default function LoginView() {
                     </SecondaryButton>
 
                     <div className="link-text">
+                        <Link to="/">← Back to Home</Link>
+                    </div>
+
+                    <div className="link-text">
                         <Link to="/recover-password">Forgot Password?</Link>
                     </div>
                 </form>
