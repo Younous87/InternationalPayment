@@ -298,10 +298,10 @@ jobs:
             cd backend
             npm test -- --coverage --coverageReporters=lcov || true
           no_output_timeout: 10m
-      - sonarcloud/scan:
-          cache_version: 1
-          no_output_timeout: 15m
-          sonar_project_properties: |
+      - run:
+          name: Configure SonarQube for Backend
+          command: |
+            cat > sonar-project.properties << EOF
             sonar.projectKey=Younous87_InternationalPayment_Backend
             sonar.organization=younous87
             sonar.projectName=International Payment System - Backend
@@ -315,6 +315,9 @@ jobs:
             sonar.tests=backend/tests
             sonar.test.inclusions=**/*.test.js
             sonar.javascript.node.maxSpace=2048
+            EOF
+      - sonarcloud/scan:
+          cache_version: 1
       - store_artifacts:
           path: .scannerwork
       - run:
@@ -341,10 +344,10 @@ jobs:
             cd frontend
             CI=true npm test -- --coverage --coverageReporters=lcov --watchAll=false || true
           no_output_timeout: 10m
-      - sonarcloud/scan:
-          cache_version: 1
-          no_output_timeout: 15m
-          sonar_project_properties: |
+      - run:
+          name: Configure SonarQube for Frontend
+          command: |
+            cat > sonar-project.properties << EOF
             sonar.projectKey=Younous87_InternationalPayment_Frontend
             sonar.organization=younous87
             sonar.projectName=International Payment System - Frontend
@@ -358,6 +361,9 @@ jobs:
             sonar.tests=frontend/src
             sonar.test.inclusions=**/*.test.js,**/*.test.jsx
             sonar.javascript.node.maxSpace=2048
+            EOF
+      - sonarcloud/scan:
+          cache_version: 1
       - store_artifacts:
           path: .scannerwork
       - run:
