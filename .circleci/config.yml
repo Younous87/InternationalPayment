@@ -4,7 +4,6 @@ version: 2.1
 orbs:
   node: circleci/node@5.1.0
   snyk: snyk/snyk@2.0.0
-  sonarcloud: sonarsource/sonarcloud@2.0.0
 
 # Define reusable executors
 executors:
@@ -279,19 +278,18 @@ jobs:
       - store_artifacts:
           path: backend/test-results
 
-  # SonarQube Code Quality Analysis for Backend
-  sonarqube-scan-backend:
+  # SonarQube Code Quality Analysis
+  sonarqube-scan:
     executor: node-executor
+    environment:
+      SONAR_SCANNER_OPTS: "-Xmx2048m"
+      SONAR_HOST_URL: "https://sonarcloud.io"
     steps:
       - checkout
       - restore_cache:
           keys:
-            - v1-dependencies-{{ checksum "backend/package-lock.json" }}
-      - run:
-          name: Install Backend Dependencies
-          command: |
-            cd backend
-            npm ci
+            - v1-dependencies-{{ checksum "backend/package-lock.json" }}-{{ checksum "frontend/package-lock.json" }}
+      - install-dependencies
       - run:
           name: Generate Backend Test Coverage
           command: |
@@ -299,77 +297,42 @@ jobs:
             npm test -- --coverage --coverageReporters=lcov || true
           no_output_timeout: 10m
       - run:
-          name: Configure SonarQube for Backend
-          command: |
-            echo "sonar.projectKey=Younous87_InternationalPayment" > sonar-project.properties
-            echo "sonar.organization=younous87" >> sonar-project.properties
-            echo "sonar.projectName=International Payment System - Backend" >> sonar-project.properties
-            echo "sonar.projectVersion=1.0" >> sonar-project.properties
-            echo "sonar.sources=backend" >> sonar-project.properties
-            echo "sonar.exclusions=**/node_modules/**,**/coverage/**,**/*.test.js,**/setupTests.js" >> sonar-project.properties
-            echo "sonar.javascript.lcov.reportPaths=backend/coverage/lcov.info" >> sonar-project.properties
-            echo "sonar.sourceEncoding=UTF-8" >> sonar-project.properties
-            echo "sonar.javascript.file.suffixes=.js" >> sonar-project.properties
-            echo "sonar.qualitygate.wait=true" >> sonar-project.properties
-            echo "sonar.tests=backend/tests" >> sonar-project.properties
-            echo "sonar.test.inclusions=**/*.test.js" >> sonar-project.properties
-            echo "sonar.javascript.node.maxSpace=2048" >> sonar-project.properties
-            echo "sonar.branch.name=backend" >> sonar-project.properties
-            echo "sonar.branch.target=main" >> sonar-project.properties
-      - sonarcloud/scan:
-          cache_version: 1
-      - store_artifacts:
-          path: .scannerwork
-      - run:
-          name: SonarQube Backend Quality Gate Check
-          command: |
-            echo "Backend SonarQube scan completed. Check SonarCloud dashboard for results."
-
-  # SonarQube Code Quality Analysis for Frontend
-  sonarqube-scan-frontend:
-    executor: node-executor
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - v1-dependencies-{{ checksum "frontend/package-lock.json" }}
-      - run:
-          name: Install Frontend Dependencies
-          command: |
-            cd frontend
-            npm ci
-      - run:
           name: Generate Frontend Test Coverage
           command: |
             cd frontend
             CI=true npm test -- --coverage --coverageReporters=lcov --watchAll=false || true
           no_output_timeout: 10m
       - run:
-          name: Configure SonarQube for Frontend
+          name: Install Sonar Scanner CLI
           command: |
-            echo "sonar.projectKey=Younous87_InternationalPayment" > sonar-project.properties
-            echo "sonar.organization=younous87" >> sonar-project.properties
-            echo "sonar.projectName=International Payment System - Frontend" >> sonar-project.properties
-            echo "sonar.projectVersion=1.0" >> sonar-project.properties
-            echo "sonar.sources=frontend/src" >> sonar-project.properties
-            echo "sonar.exclusions=**/node_modules/**,**/build/**,**/coverage/**,**/*.test.js,**/*.test.jsx,**/setupTests.js" >> sonar-project.properties
-            echo "sonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info" >> sonar-project.properties
-            echo "sonar.sourceEncoding=UTF-8" >> sonar-project.properties
-            echo "sonar.javascript.file.suffixes=.js,.jsx" >> sonar-project.properties
-            echo "sonar.qualitygate.wait=true" >> sonar-project.properties
-            echo "sonar.tests=frontend/src" >> sonar-project.properties
-            echo "sonar.test.inclusions=**/*.test.js,**/*.test.jsx" >> sonar-project.properties
-            echo "sonar.javascript.node.maxSpace=2048" >> sonar-project.properties
-            echo "sonar.branch.name=frontend" >> sonar-project.properties
-            echo "sonar.branch.target=main" >> sonar-project.properties
-      - sonarcloud/scan:
-          cache_version: 1
+            curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+            unzip -q sonar-scanner.zip
+            rm -rf sonar-scanner
+            mv sonar-scanner-5.0.1.3006-linux sonar-scanner
+            rm sonar-scanner.zip
+      - run:
+          name: Run SonarQube Scan
+          command: |
+            set -euo pipefail
+            export SONAR_SCANNER_HOME="$PWD/sonar-scanner"
+            export PATH="$SONAR_SCANNER_HOME/bin:$PATH"
+            keepalive() {
+              while true; do
+                echo "$(date -Is) SonarQube scan in progress..."
+                sleep 60
+              done
+            }
+            keepalive &
+            HEARTBEAT=$!
+            trap 'kill $HEARTBEAT >/dev/null 2>&1 || true' EXIT
+            sonar-scanner
+            kill $HEARTBEAT >/dev/null 2>&1 || true
       - store_artifacts:
           path: .scannerwork
       - run:
-          name: SonarQube Frontend Quality Gate Check
+          name: SonarQube Quality Gate Check
           command: |
-            echo "Frontend SonarQube scan completed. Check SonarCloud dashboard for results."
+            echo "SonarQube scan completed. Check SonarCloud dashboard for results."
 
   # Deployment approval gate
   deploy-approval:
@@ -458,14 +421,7 @@ workflows:
               only: /.*/
       
       # SonarQube Code Quality Scan
-      - sonarqube-scan-backend:
-          requires:
-            - api-security-test
-          filters:
-            branches:
-              only: /.*/
-      
-      - sonarqube-scan-frontend:
+      - sonarqube-scan:
           requires:
             - api-security-test
           filters:
@@ -476,8 +432,7 @@ workflows:
       - deploy-approval:
           type: approval
           requires:
-            - sonarqube-scan-backend
-            - sonarqube-scan-frontend
+            - sonarqube-scan
             - security-container-scan
           filters:
             branches:
@@ -505,9 +460,6 @@ workflows:
       - api-security-test:
           requires:
             - security-dependency-scan
-      - sonarqube-scan-backend:
-          requires:
-            - api-security-test
-      - sonarqube-scan-frontend:
+      - sonarqube-scan:
           requires:
             - api-security-test
