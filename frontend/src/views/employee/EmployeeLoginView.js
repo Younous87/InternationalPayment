@@ -71,7 +71,7 @@ export default function EmployeeLoginView() {
                 window.location.href = "/dashboard";
             }
         } catch (error) {
-            console.error('Employee login failed:', error);
+            // Login error occurred
             alert(error?.message || "Something went wrong. Try again.");
         }
     };
