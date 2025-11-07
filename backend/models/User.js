@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
     accountNumber : {type: Number, required : true},
     email : {type: String, required : true},
     password : {type: String, required : true},
+    accountType : {type: String, required : true},
     
     // Password Security Features
     passwordHistory: {

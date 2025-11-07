@@ -108,6 +108,7 @@ router.post("/register", async(req, res) => {
             username,
             fullname,
             idNumber,
+            accountType : "client",
             accountNumber: Number(accountNumber),
             email,
             password: hashedPassword,
@@ -124,7 +125,8 @@ router.post("/register", async(req, res) => {
             user: {
                 username: newUser.username,
                 email: newUser.email,
-                accountNumber: newUser.accountNumber
+                accountNumber: newUser.accountNumber,
+                accountType: newUser.accountType
             },
             security: {
                 passwordStrength: passwordValidation.strength,
@@ -229,7 +231,8 @@ router.post("/login", async(req, res) => {
                 username: user.username,
                 accountNumber: user.accountNumber,
                 email: user.email,
-                fullname: user.fullname
+                fullname: user.fullname,
+                accountType: user.accountType
             }
         });
         
