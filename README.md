@@ -536,14 +536,14 @@ The project includes test coverage for:
 ### YouTube Video Links
 
 Part 1
-[![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/kYr0gMwX8T8)
+[![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/thwmUcZRrRE)
 
 Part 2
-[![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/TteFEY52IQU)
+[![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/FQznURWFcRw)
 
 ### GitHub Repository
 
-[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/JoseLubota/InternationalPayment.git)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Younous87/InternationalPayment.git)
 
 ---
 
@@ -594,19 +594,20 @@ Part 2
 - npm. (2025b). react-router-dom. [online] Available at: https://www.npmjs.com/package/react-router-dom [Accessed 10 Oct. 2025].
 
 - React.dev. (2015). React. [online] Available at: https://react.dev/ [Accessed 10 Oct. 2025].
+  
+- CircleCI (2023). Sample config.yml Files :: CircleCI Documentation. [online] Circleci.com. Available at: https://circleci.com/docs/guides/toolkit/sample-config/ [Accessed 5 Nov. 2025].
+
+- CircleCI (2025). Configure a Node.js application on CircleCI :: CircleCI Documentation. [online] Circleci.com. Available at: https://circleci.com/docs/guides/getting-started/language-javascript/ [Accessed 5 Nov. 2025].
+
+- Kashyap, P. (2024). Comprehensive Guide to SonarQube: Understanding, Benefits, Setup, and Code Quality Analysis with FastAPI. [online] Medium. Available at: https://medium.com/@piyushkashyap045/comprehensive-guide-to-sonarqube-understanding-benefits-setup-and-code-quality-analysis-with-caffbc8afa0f [Accessed 6 Nov. 2025].
 
 ---
 
-## License
+## AI Usage
 
-This project is licensed under the ISC License.
+AI tools were used as supplementary resources to improve understanding of programming concepts. These tools provided guidance but all implementation work was performed by us.
 
----
+Claude AI: Anthropic, 2025. Claude. Available at: https://claude.ai.
 
-## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
 
----
-
-**Built with ❤️ for secure international payments**
