@@ -315,6 +315,7 @@ jobs:
             echo "sonar.test.inclusions=**/*.test.js" >> sonar-project.properties
             echo "sonar.javascript.node.maxSpace=2048" >> sonar-project.properties
             echo "sonar.branch.name=backend" >> sonar-project.properties
+            echo "sonar.branch.target=main" >> sonar-project.properties
       - sonarcloud/scan:
           cache_version: 1
       - store_artifacts:
@@ -360,6 +361,7 @@ jobs:
             echo "sonar.test.inclusions=**/*.test.js,**/*.test.jsx" >> sonar-project.properties
             echo "sonar.javascript.node.maxSpace=2048" >> sonar-project.properties
             echo "sonar.branch.name=frontend" >> sonar-project.properties
+            echo "sonar.branch.target=main" >> sonar-project.properties
       - sonarcloud/scan:
           cache_version: 1
       - store_artifacts:
