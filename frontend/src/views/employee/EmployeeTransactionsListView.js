@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/shared/Card';
 import { PrimaryButton } from '../../components/shared/Button';
@@ -6,15 +6,38 @@ import { PrimaryButton } from '../../components/shared/Button';
 export default function EmployeeTransactionsListView() {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchPendingTransactions();
-    }, []);
-
-    const fetchPendingTransactions = async () => {
+    const fetchPendingTransactions = useCallback(async () => {
         try {
+            setLoading(true);
+            setError('');
             const token = localStorage.getItem("employeeToken");
+            const employeeRaw = localStorage.getItem('employee');
+
+            if (!token) {
+                setLoading(false);
+                navigate('/employee/login', { replace: true });
+                return;
+            }
+
+            if (employeeRaw) {
+                try {
+                    const employee = JSON.parse(employeeRaw);
+                    if (employee?.accountType !== 'employee') {
+                        setLoading(false);
+                        navigate('/employee/login', { replace: true });
+                        return;
+                    }
+                } catch (parseError) {
+                    localStorage.removeItem('employee');
+                    setLoading(false);
+                    navigate('/employee/login', { replace: true });
+                    return;
+                }
+            }
+
             const response = await fetch("https://localhost:4000/api/payments/pending", {
                 method: "GET",
                 headers: {
@@ -22,19 +45,34 @@ export default function EmployeeTransactionsListView() {
                 },
             });
 
-            const data = await response.json();
+            const isJson = (response.headers.get('content-type') || '').includes('application/json');
+            const data = isJson ? await response.json() : {};
 
             if (response.ok) {
                 setTransactions(data.payments || []);
+                setError('');
             } else {
-                alert(data.message || "Failed to fetch transactions");
+                const message = data.message || "Failed to fetch transactions";
+                setError(message);
+
+                if (response.status === 401 || response.status === 403) {
+                    alert(message);
+                    navigate('/employee/login', { replace: true });
+                } else {
+                    alert(message);
+                }
             }
         } catch (error) {
-            alert("Something went wrong. Try again.");
+            setError(error?.message || 'Something went wrong. Try again.');
+            alert(error?.message || "Something went wrong. Try again.");
         } finally {
             setLoading(false);
         }
-    };
+    }, [navigate]);
+
+    useEffect(() => {
+        fetchPendingTransactions();
+    }, [fetchPendingTransactions]);
 
     const handleViewDetails = (transactionId) => {
         navigate(`/employee/transactions/${transactionId}`);
@@ -59,6 +97,13 @@ export default function EmployeeTransactionsListView() {
 
                 {loading ? (
                     <div className="loading-text">Loading transactions...</div>
+                ) : error ? (
+                    <div className="empty-state">
+                        <p>{error}</p>
+                        <PrimaryButton onClick={fetchPendingTransactions}>
+                            Retry
+                        </PrimaryButton>
+                    </div>
                 ) : transactions.length === 0 ? (
                     <div className="empty-state">
                         <p>No pending transactions to verify.</p>

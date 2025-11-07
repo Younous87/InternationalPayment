@@ -3,6 +3,11 @@ import { Link } from 'react-router-dom';
 import Card from '../../components/shared/Card';
 import { FormGroup, FormInput } from '../../components/shared/Form';
 import { PrimaryButton } from '../../components/shared/Button';
+import {
+    sanitizeInput,
+    validateAgainstWhitelist,
+    checkForInjectionPatterns
+} from '../../utils/inputValidation';
 
 export default function RecoverPasswordView() {
     const [formData, setFormData] = useState({
@@ -12,6 +17,9 @@ export default function RecoverPasswordView() {
         confirmPassword: ''
     });
     const [step, setStep] = useState(1); // 1: email, 2: code, 3: reset password, 4: success
+    const [loading, setLoading] = useState(false);
+    const [feedback, setFeedback] = useState('');
+    const [error, setError] = useState('');
 
     const handleChange = (event) => {
         const { name, value } = event.target;
@@ -20,83 +28,169 @@ export default function RecoverPasswordView() {
 
     const handleSendCode = async (event) => {
         event.preventDefault();
-        const { email } = formData;
+        if (loading) return;
+
+        const sanitizedEmail = sanitizeInput(formData.email).toLowerCase();
+        const emailCheck = validateAgainstWhitelist(sanitizedEmail, 'email');
+
+        if (!emailCheck.isValid) {
+            setError('Please enter a valid email address.');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+        setFeedback('');
 
         try {
-            const response = await fetch("https://localhost:4000/api/auth/recover-password", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email }),
+            const response = await fetch('https://localhost:4000/api/auth/recover-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: sanitizedEmail })
             });
 
-            const data = await response.json();
+            const isJson = (response.headers.get('content-type') || '').includes('application/json');
+            const data = isJson ? await response.json() : {};
 
             if (response.ok) {
                 setStep(2);
+                let message = data.message || 'If an account exists, a recovery code has been sent.';
+                if (data?.developmentOnly?.recoveryCode) {
+                    message = `${message} (Dev code: ${data.developmentOnly.recoveryCode})`;
+                }
+                setFeedback(message);
+                setFormData(prev => ({ ...prev, email: sanitizedEmail }));
             } else {
-                alert(data.message || "Failed to send recovery code");
+                const message = data.message || 'Failed to send recovery code';
+                setError(message);
+                alert(message);
             }
-        } catch (error) {
-            // Error sending recovery code
-            alert("Something went wrong. Try again.");
+        } catch (err) {
+            const message = err?.message || 'Something went wrong. Try again.';
+            setError(message);
+            alert(message);
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleVerifyCode = async (event) => {
         event.preventDefault();
-        const { email, recoveryCode } = formData;
+        if (loading) return;
+
+        const sanitizedEmail = sanitizeInput(formData.email).toLowerCase();
+        const sanitizedCode = sanitizeInput(formData.recoveryCode);
+
+        const emailCheck = validateAgainstWhitelist(sanitizedEmail, 'email');
+        if (!emailCheck.isValid) {
+            setError('Invalid email address.');
+            return;
+        }
+
+        if (!/^[0-9]{6}$/.test(sanitizedCode)) {
+            setError('Recovery code must be a 6-digit number.');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
 
         try {
-            const response = await fetch("https://localhost:4000/api/auth/verify-recovery-code", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, recoveryCode }),
+            const response = await fetch('https://localhost:4000/api/auth/verify-recovery-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: sanitizedEmail, recoveryCode: sanitizedCode })
             });
 
-            const data = await response.json();
+            const isJson = (response.headers.get('content-type') || '').includes('application/json');
+            const data = isJson ? await response.json() : {};
 
             if (response.ok) {
                 setStep(3);
+                setFeedback('Recovery code verified. You can now reset your password.');
+                setFormData(prev => ({ ...prev, email: sanitizedEmail, recoveryCode: sanitizedCode }));
             } else {
-                alert(data.message || "Invalid recovery code");
+                const message = data.message || 'Invalid recovery code';
+                setError(message);
+                alert(message);
             }
-        } catch (error) {
-            // Error verifying recovery code
-            alert("Something went wrong. Try again.");
+        } catch (err) {
+            const message = err?.message || 'Something went wrong. Try again.';
+            setError(message);
+            alert(message);
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleResetPassword = async (event) => {
         event.preventDefault();
-        const { email, recoveryCode, newPassword, confirmPassword } = formData;
+        if (loading) return;
 
-        if (newPassword !== confirmPassword) {
-            alert("Passwords do not match");
+        const sanitizedEmail = sanitizeInput(formData.email).toLowerCase();
+        const sanitizedCode = sanitizeInput(formData.recoveryCode);
+        const sanitizedPassword = sanitizeInput(formData.newPassword);
+        const sanitizedConfirm = sanitizeInput(formData.confirmPassword);
+
+        const emailCheck = validateAgainstWhitelist(sanitizedEmail, 'email');
+        if (!emailCheck.isValid) {
+            setError('Invalid email address.');
             return;
         }
 
-        if (newPassword.length < 8) {
-            alert("Password must be at least 8 characters long");
+        if (!/^[0-9]{6}$/.test(sanitizedCode)) {
+            setError('Recovery code must be a 6-digit number.');
             return;
         }
+
+        if (sanitizedPassword !== sanitizedConfirm) {
+            setError('Passwords do not match.');
+            return;
+        }
+
+        if (sanitizedPassword.length < 8) {
+            setError('Password must be at least 8 characters long.');
+            return;
+        }
+
+        const passwordThreats = checkForInjectionPatterns(sanitizedPassword);
+        if (!passwordThreats.isSafe) {
+            setError('Password contains prohibited characters.');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
 
         try {
-            const response = await fetch("https://localhost:4000/api/auth/reset-password", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, recoveryCode, newPassword }),
+            const response = await fetch('https://localhost:4000/api/auth/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: sanitizedEmail,
+                    recoveryCode: sanitizedCode,
+                    newPassword: sanitizedPassword
+                })
             });
 
-            const data = await response.json();
+            const isJson = (response.headers.get('content-type') || '').includes('application/json');
+            const data = isJson ? await response.json() : {};
 
             if (response.ok) {
                 setStep(4);
+                setFeedback(data.message || 'Password updated successfully.');
+                setFormData({ email: sanitizedEmail, recoveryCode: sanitizedCode, newPassword: '', confirmPassword: '' });
             } else {
-                alert(data.message || "Failed to reset password");
+                const message = data.message || 'Failed to reset password';
+                setError(message);
+                alert(message);
             }
-        } catch (error) {
-            // Error resetting password
-            alert("Something went wrong. Try again.");
+        } catch (err) {
+            const message = err?.message || 'Something went wrong. Try again.';
+            setError(message);
+            alert(message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -109,6 +203,8 @@ export default function RecoverPasswordView() {
                             🔄
                         </div>
                         <h1 className="card-title">Recover Password</h1>
+                        {feedback && <p className="card-subtitle">{feedback}</p>}
+                        {error && <p className="error-text" role="alert">{error}</p>}
                     </div>
 
                     <form onSubmit={handleSendCode}>
@@ -123,8 +219,8 @@ export default function RecoverPasswordView() {
                             />
                         </FormGroup>
 
-                        <PrimaryButton type="submit">
-                            Send Code
+                        <PrimaryButton type="submit" disabled={loading}>
+                            {loading ? 'Sending…' : 'Send Code'}
                         </PrimaryButton>
                     </form>
                 </Card>
@@ -144,6 +240,8 @@ export default function RecoverPasswordView() {
                         <p className="card-subtitle">
                             A 6-digit recovery code has been sent to your email address. Please enter it below.
                         </p>
+                        {feedback && <p className="card-subtitle">{feedback}</p>}
+                        {error && <p className="error-text" role="alert">{error}</p>}
                     </div>
 
                     <form onSubmit={handleVerifyCode}>
@@ -159,8 +257,8 @@ export default function RecoverPasswordView() {
                             />
                         </FormGroup>
 
-                        <PrimaryButton type="submit">
-                            Verify Code
+                        <PrimaryButton type="submit" disabled={loading}>
+                            {loading ? 'Verifying…' : 'Verify Code'}
                         </PrimaryButton>
                     </form>
                 </Card>
@@ -177,6 +275,8 @@ export default function RecoverPasswordView() {
                             🔒
                         </div>
                         <h1 className="card-title">Reset Password</h1>
+                        {feedback && <p className="card-subtitle">{feedback}</p>}
+                        {error && <p className="error-text" role="alert">{error}</p>}
                     </div>
 
                     <form onSubmit={handleResetPassword}>
@@ -204,8 +304,8 @@ export default function RecoverPasswordView() {
                             />
                         </FormGroup>
 
-                        <PrimaryButton type="submit">
-                            Reset Password
+                        <PrimaryButton type="submit" disabled={loading}>
+                            {loading ? 'Updating…' : 'Reset Password'}
                         </PrimaryButton>
                     </form>
                 </Card>
@@ -225,6 +325,8 @@ export default function RecoverPasswordView() {
                         <p className="card-subtitle">
                             Your password has been reset successfully. Please login with your new password.
                         </p>
+                        {feedback && <p className="card-subtitle">{feedback}</p>}
+                        {error && <p className="error-text" role="alert">{error}</p>}
                     </div>
 
                     <PrimaryButton>

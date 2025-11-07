@@ -10,13 +10,12 @@ const mockGetItem = jest.fn();
 Object.defineProperty(window, 'localStorage', {
   value: {
     getItem: mockGetItem,
+    removeItem: jest.fn(),
   },
 });
 
-// Mock alert
+// Mock alert & confirm
 global.alert = jest.fn();
-
-// Mock window.confirm
 global.confirm = jest.fn();
 
 // Mock useNavigate
@@ -27,35 +26,57 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
-test('renders employee transaction detail', async () => {
-  mockGetItem.mockReturnValue('test-token');
+const basePayment = ({ overrides = {} } = {}) => ({
+  transactionId: '123',
+  userId: { fullname: 'John Doe' },
+  beneficiaryName: 'Jane Doe',
+  amount: 100,
+  currency: 'USD',
+  createdAt: new Date().toISOString(),
+  status: 'pending',
+  beneficiaryBankName: 'Bank',
+  swiftCode: 'SWFTAA00',
+  beneficiaryAccountNumber: '123456',
+  ...overrides,
+});
 
-  // Mock successful fetch
-  fetch.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({
-      payment: {
-        transactionId: '123',
-        userId: { fullname: 'John Doe' },
-        beneficiaryName: 'Jane Doe',
-        amount: 100,
-        currency: 'USD',
-        createdAt: new Date().toISOString(),
-        status: 'Pending',
-        beneficiaryBankName: 'Bank',
-        swiftCode: 'SWFT',
-        beneficiaryAccountNumber: '123456'
-      }
-    }),
+const setEmployeeContext = (overrides = {}) => {
+  mockGetItem.mockImplementation((key) => {
+    if (key === 'employeeToken') {
+      return overrides.token ?? 'test-token';
+    }
+    if (key === 'employee') {
+      return overrides.employee ?? JSON.stringify({ accountType: 'employee' });
+    }
+    return null;
   });
+};
 
+beforeEach(() => {
+  jest.clearAllMocks();
+  fetch.mockReset();
+  mockGetItem.mockReset();
+  global.confirm.mockReset();
+  setEmployeeContext();
+});
+
+const renderView = () => {
   render(
     <MemoryRouter>
       <EmployeeTransactionDetailView />
     </MemoryRouter>
   );
+};
 
-  // Wait for data to load
+test('renders employee transaction detail', async () => {
+  fetch.mockResolvedValueOnce({
+    ok: true,
+    headers: { get: () => 'application/json' },
+    json: async () => ({ payment: basePayment() }),
+  });
+
+  renderView();
+
   await waitFor(() => {
     expect(screen.getByText(/transaction id:/i)).toBeInTheDocument();
   });
@@ -64,38 +85,35 @@ test('renders employee transaction detail', async () => {
   expect(screen.getByText('John Doe')).toBeInTheDocument();
   expect(screen.getByText('Jane Doe')).toBeInTheDocument();
   expect(screen.getByText('USD 100.00')).toBeInTheDocument();
-  expect(screen.getByText('Pending')).toBeInTheDocument();
+  expect(screen.getByText(/pending/i)).toBeInTheDocument();
 });
 
 test('shows loading state initially', () => {
-  mockGetItem.mockReturnValue('test-token');
-
-  // Mock pending fetch
   fetch.mockImplementation(() => new Promise(() => {}));
 
-  render(
-    <MemoryRouter>
-      <EmployeeTransactionDetailView />
-    </MemoryRouter>
-  );
+  renderView();
 
   expect(screen.getByText('Loading transaction details...')).toBeInTheDocument();
 });
 
-test('handles transaction not found', async () => {
-  mockGetItem.mockReturnValue('test-token');
+test('redirects to login when token missing', async () => {
+  setEmployeeContext({ token: null });
 
-  // Mock failed fetch
+  renderView();
+
+  await waitFor(() => {
+    expect(mockNavigate).toHaveBeenCalledWith('/employee/login', { replace: true });
+  });
+});
+
+test('handles transaction not found', async () => {
   fetch.mockResolvedValueOnce({
     ok: false,
+    headers: { get: () => 'application/json' },
     json: async () => ({ message: 'Transaction not found' }),
   });
 
-  render(
-    <MemoryRouter>
-      <EmployeeTransactionDetailView />
-    </MemoryRouter>
-  );
+  renderView();
 
   await waitFor(() => {
     expect(global.alert).toHaveBeenCalledWith('Transaction not found');
@@ -105,16 +123,9 @@ test('handles transaction not found', async () => {
 });
 
 test('handles network error', async () => {
-  mockGetItem.mockReturnValue('test-token');
-
-  // Mock network error
   fetch.mockRejectedValueOnce(new Error('Network error'));
 
-  render(
-    <MemoryRouter>
-      <EmployeeTransactionDetailView />
-    </MemoryRouter>
-  );
+  renderView();
 
   await waitFor(() => {
     expect(global.alert).toHaveBeenCalledWith('Something went wrong. Try again.');
@@ -123,47 +134,33 @@ test('handles network error', async () => {
   expect(mockNavigate).toHaveBeenCalledWith('/employee/transactions');
 });
 
-test('handles send to SWIFT success', async () => {
-  mockGetItem.mockReturnValue('test-token');
+test('handles send to SWIFT success and refreshes details', async () => {
   global.confirm.mockReturnValue(true);
 
-  // Mock successful transaction fetch
-  fetch.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({
-      payment: {
-        transactionId: '123',
-        userId: { fullname: 'John Doe' },
-        beneficiaryName: 'Jane Doe',
-        amount: 100,
-        currency: 'USD',
-        createdAt: new Date().toISOString(),
-        status: 'Pending',
-        beneficiaryBankName: 'Bank',
-        swiftCode: 'SWFT',
-        beneficiaryAccountNumber: '123456'
-      }
-    }),
-  });
+  fetch
+    .mockResolvedValueOnce({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ payment: basePayment() }),
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ message: 'Success' }),
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ payment: basePayment({ overrides: { status: 'processing' } }) }),
+    });
 
-  // Mock successful SWIFT send
-  fetch.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({ message: 'Success' }),
-  });
-
-  render(
-    <MemoryRouter>
-      <EmployeeTransactionDetailView />
-    </MemoryRouter>
-  );
+  renderView();
 
   await waitFor(() => {
     expect(screen.getByText('Send to SWIFT')).toBeInTheDocument();
   });
 
-  const sendButton = screen.getByText('Send to SWIFT');
-  fireEvent.click(sendButton);
+  fireEvent.click(screen.getByText('Send to SWIFT'));
 
   await waitFor(() => {
     expect(fetch).toHaveBeenCalledWith(
@@ -171,8 +168,8 @@ test('handles send to SWIFT success', async () => {
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
-          'Authorization': 'Bearer test-token',
-          'Content-Type': 'application/json'
+          Authorization: 'Bearer test-token',
+          'Content-Type': 'application/json',
         }),
         body: JSON.stringify({ action: 'send_to_swift' }),
       })
@@ -180,90 +177,60 @@ test('handles send to SWIFT success', async () => {
   });
 
   expect(global.alert).toHaveBeenCalledWith('Transaction sent to SWIFT successfully!');
-  expect(mockNavigate).toHaveBeenCalledWith('/employee/transactions');
+  expect(mockNavigate).not.toHaveBeenCalledWith('/employee/transactions');
+
+  await waitFor(() => {
+    expect(screen.getByText(/processing/i)).toBeInTheDocument();
+  });
 });
 
 test('handles send to SWIFT cancellation', async () => {
-  mockGetItem.mockReturnValue('test-token');
-  global.confirm.mockReturnValue(false); // User cancels
+  global.confirm.mockReturnValue(false);
 
-  // Mock successful transaction fetch
   fetch.mockResolvedValueOnce({
     ok: true,
-    json: async () => ({
-      payment: {
-        transactionId: '123',
-        userId: { fullname: 'John Doe' },
-        beneficiaryName: 'Jane Doe',
-        amount: 100,
-        currency: 'USD',
-        createdAt: new Date().toISOString(),
-        status: 'Pending',
-        beneficiaryBankName: 'Bank',
-        swiftCode: 'SWFT',
-        beneficiaryAccountNumber: '123456'
-      }
-    }),
+    headers: { get: () => 'application/json' },
+    json: async () => ({ payment: basePayment() }),
   });
 
-  render(
-    <MemoryRouter>
-      <EmployeeTransactionDetailView />
-    </MemoryRouter>
-  );
+  renderView();
 
   await waitFor(() => {
     expect(screen.getByText('Send to SWIFT')).toBeInTheDocument();
   });
 
-  const sendButton = screen.getByText('Send to SWIFT');
-  fireEvent.click(sendButton);
+  fireEvent.click(screen.getByText('Send to SWIFT'));
 
-  // Should not make API call when cancelled
-  expect(fetch).toHaveBeenCalledTimes(1); // Only the initial fetch
+  expect(fetch).toHaveBeenCalledTimes(1);
 });
 
-test('handles reject transaction success', async () => {
-  mockGetItem.mockReturnValue('test-token');
+test('handles reject transaction success and refreshes details', async () => {
   global.confirm.mockReturnValue(true);
 
-  // Mock successful transaction fetch
-  fetch.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({
-      payment: {
-        transactionId: '123',
-        userId: { fullname: 'John Doe' },
-        beneficiaryName: 'Jane Doe',
-        amount: 100,
-        currency: 'USD',
-        createdAt: new Date().toISOString(),
-        status: 'Pending',
-        beneficiaryBankName: 'Bank',
-        swiftCode: 'SWFT',
-        beneficiaryAccountNumber: '123456'
-      }
-    }),
-  });
+  fetch
+    .mockResolvedValueOnce({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ payment: basePayment() }),
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ message: 'Success' }),
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ payment: basePayment({ overrides: { status: 'cancelled' } }) }),
+    });
 
-  // Mock successful reject
-  fetch.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({ message: 'Success' }),
-  });
-
-  render(
-    <MemoryRouter>
-      <EmployeeTransactionDetailView />
-    </MemoryRouter>
-  );
+  renderView();
 
   await waitFor(() => {
     expect(screen.getByText('Reject')).toBeInTheDocument();
   });
 
-  const rejectButton = screen.getByText('Reject');
-  fireEvent.click(rejectButton);
+  fireEvent.click(screen.getByText('Reject'));
 
   await waitFor(() => {
     expect(fetch).toHaveBeenCalledWith(
@@ -271,82 +238,47 @@ test('handles reject transaction success', async () => {
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
-          'Authorization': 'Bearer test-token',
-          'Content-Type': 'application/json'
+          Authorization: 'Bearer test-token',
+          'Content-Type': 'application/json',
         }),
       })
     );
   });
 
   expect(global.alert).toHaveBeenCalledWith('Transaction rejected successfully!');
-  expect(mockNavigate).toHaveBeenCalledWith('/employee/transactions');
+  expect(mockNavigate).not.toHaveBeenCalledWith('/employee/transactions');
+
+  await waitFor(() => {
+    expect(screen.getByText(/cancelled/i)).toBeInTheDocument();
+  });
 });
 
 test('handles back button click', async () => {
-  mockGetItem.mockReturnValue('test-token');
-
-  // Mock successful fetch
   fetch.mockResolvedValueOnce({
     ok: true,
-    json: async () => ({
-      payment: {
-        transactionId: '123',
-        userId: { fullname: 'John Doe' },
-        beneficiaryName: 'Jane Doe',
-        amount: 100,
-        currency: 'USD',
-        createdAt: new Date().toISOString(),
-        status: 'Pending',
-        beneficiaryBankName: 'Bank',
-        swiftCode: 'SWFT',
-        beneficiaryAccountNumber: '123456'
-      }
-    }),
+    headers: { get: () => 'application/json' },
+    json: async () => ({ payment: basePayment() }),
   });
 
-  render(
-    <MemoryRouter>
-      <EmployeeTransactionDetailView />
-    </MemoryRouter>
-  );
+  renderView();
 
   await waitFor(() => {
     expect(screen.getByLabelText('Go back')).toBeInTheDocument();
   });
 
-  const backButton = screen.getByLabelText('Go back');
-  fireEvent.click(backButton);
+  fireEvent.click(screen.getByLabelText('Go back'));
 
   expect(mockNavigate).toHaveBeenCalledWith('/employee/transactions');
 });
 
 test('handles missing user data gracefully', async () => {
-  mockGetItem.mockReturnValue('test-token');
-
-  // Mock successful fetch with missing user data
   fetch.mockResolvedValueOnce({
     ok: true,
-    json: async () => ({
-      payment: {
-        transactionId: '123',
-        userId: null, // Missing user data
-        beneficiaryName: 'Jane Doe',
-        amount: 100,
-        currency: 'USD',
-        createdAt: new Date().toISOString(),
-        status: 'Pending',
-        beneficiaryBankName: 'Bank',
-        swiftCode: 'SWFT',
-        beneficiaryAccountNumber: '123456'
-      }
-    }),
+    headers: { get: () => 'application/json' },
+    json: async () => ({ payment: basePayment({ overrides: { userId: null } }) }),
   });
 
-  render(
-    <MemoryRouter>
-      <EmployeeTransactionDetailView />
-    </MemoryRouter>
-  );
+  renderView();
 
   await waitFor(() => {
     expect(screen.getByText('N/A')).toBeInTheDocument();
