@@ -19,6 +19,13 @@ const JWT_SECRET = process.env.JWT_SECRET || "8847ee188f91e31bcb45d6c4c6189c6ca9
 // Register new user with password security and input whitelisting
 router.post("/register", async(req, res) => {
     try {
+        // Defensive guard: ensure body was parsed
+        if (!req.body || typeof req.body !== 'object') {
+            return res.status(400).json({
+                message: "Invalid or missing request body",
+                hint: "Send a JSON payload with header 'Content-Type: application/json'"
+            });
+        }
         const {username, fullname, idNumber, accountNumber, email, password} = req.body;
         
         // Input validation - check if all fields are present
@@ -136,6 +143,13 @@ router.post("/register", async(req, res) => {
 // Login with password verification and input whitelisting
 router.post("/login", async(req, res) => {
     try {
+        // Defensive guard: ensure body was parsed
+        if (!req.body || typeof req.body !== 'object') {
+            return res.status(400).json({
+                message: "Invalid or missing request body",
+                hint: "Send a JSON payload with header 'Content-Type: application/json'"
+            });
+        }
         const {username, accountNumber, password} = req.body;
         
         // Input validation - check if all fields are present

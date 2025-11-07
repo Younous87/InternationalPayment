@@ -2,6 +2,10 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import Payment from "../models/Payment.js";
 import User from "../models/User.js";
+import {
+    validateAgainstWhitelist,
+    checkForInjectionPatterns
+} from "../utils/inputValidation.js";
 
 const router = express.Router();
 const JWT_SECRET = "8847ee188f91e31bcb45d6c4c6189c6ca948b9623a52b370d9715528ba253ce66838ce17f38af573320794b398565f6d04a80d062df3c2daa2a20d395d38df66";
@@ -48,6 +52,26 @@ router.post("/create", verifyToken, async (req, res) => {
         if (amount <= 0) {
             console.log("Validation failed - invalid amount:", amount);
             return res.status(400).json({ message: "Amount must be greater than 0" });
+        }
+
+        // Whitelist validations
+        const accountNumberCheck = validateAgainstWhitelist(beneficiaryAccountNumber, 'accountNumber');
+        if (!accountNumberCheck.isValid) {
+            return res.status(400).json({ message: "Invalid beneficiary account number" });
+        }
+
+        // Currency code must be 3 uppercase letters
+        const currencyWhitelist = /^[A-Z]{3}$/;
+        if (!currencyWhitelist.test(String(currency).trim())) {
+            return res.status(400).json({ message: "Invalid currency code" });
+        }
+
+        // Basic injection checks on free-text fields
+        const nameThreats = checkForInjectionPatterns(beneficiaryName);
+        const bankThreats = checkForInjectionPatterns(beneficiaryBankName);
+        const addrThreats = checkForInjectionPatterns(beneficiaryAddress);
+        if (!nameThreats.isSafe || !bankThreats.isSafe || !addrThreats.isSafe) {
+            return res.status(400).json({ message: "Input validation failed", threats: [...nameThreats.threats, ...bankThreats.threats, ...addrThreats.threats] });
         }
 
         // Validate SWIFT code format (6 Uppercase Characters, 2 Alphaneumeric Characters, 3 Optional Alphaneumeric Characters)
@@ -140,6 +164,13 @@ router.get("/received", verifyToken, async (req, res) => {
 router.get("/:transactionId", verifyToken, async (req, res) => {
     try {
         const { transactionId } = req.params;
+
+        // Validate transactionId against whitelist and injection patterns
+        const txnCheck = validateAgainstWhitelist(transactionId, 'alphanumeric');
+        const txnThreats = checkForInjectionPatterns(transactionId);
+        if (!txnCheck.isValid || !txnThreats.isSafe) {
+            return res.status(400).json({ message: "Invalid transactionId" });
+        }
         
         const payment = await Payment.findOne({ 
             transactionId,
@@ -161,6 +192,13 @@ router.patch("/:transactionId/status", verifyToken, async (req, res) => {
     try {
         const { transactionId } = req.params;
         const { status } = req.body;
+
+        // Validate transactionId
+        const txnCheck = validateAgainstWhitelist(transactionId, 'alphanumeric');
+        const txnThreats = checkForInjectionPatterns(transactionId);
+        if (!txnCheck.isValid || !txnThreats.isSafe) {
+            return res.status(400).json({ message: "Invalid transactionId" });
+        }
 
         const validStatuses = ['pending', 'processing', 'completed', 'failed', 'cancelled'];
         if (!validStatuses.includes(status)) {

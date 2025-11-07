@@ -1,7 +1,8 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Card from '../../components/shared/Card';
 import { PrimaryButton } from '../../components/shared/Button';
+import { validateAgainstWhitelist } from '../../utils/inputValidation';
 
 export default function EmployeeTransactionDetailView() {
     const { transactionId } = useParams();
@@ -12,6 +13,13 @@ export default function EmployeeTransactionDetailView() {
 
     const fetchTransactionDetails = useCallback(async () => {
         try {
+            // Validate transactionId using whitelist
+            const txnCheck = validateAgainstWhitelist(transactionId, 'alphanumeric');
+            if (!txnCheck.isValid) {
+                alert('Invalid transaction identifier');
+                navigate('/employee/transactions');
+                return;
+            }
             const token = localStorage.getItem("employeeToken");
             const response = await fetch(`https://localhost:4000/api/payments/employee/${transactionId}`, {
                 method: "GET",
@@ -47,6 +55,12 @@ export default function EmployeeTransactionDetailView() {
 
         setProcessing(true);
         try {
+            const txnCheck = validateAgainstWhitelist(transactionId, 'alphanumeric');
+            if (!txnCheck.isValid) {
+                alert('Invalid transaction identifier');
+                setProcessing(false);
+                return;
+            }
             const token = localStorage.getItem("employeeToken");
             const response = await fetch(`https://localhost:4000/api/payments/employee/${transactionId}/approve`, {
                 method: "POST",
@@ -79,6 +93,12 @@ export default function EmployeeTransactionDetailView() {
 
         setProcessing(true);
         try {
+            const txnCheck = validateAgainstWhitelist(transactionId, 'alphanumeric');
+            if (!txnCheck.isValid) {
+                alert('Invalid transaction identifier');
+                setProcessing(false);
+                return;
+            }
             const token = localStorage.getItem("employeeToken");
             const response = await fetch(`https://localhost:4000/api/payments/employee/${transactionId}/reject`, {
                 method: "POST",
